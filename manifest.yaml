@@ -128,3 +128,102 @@ spec:
       targetPort: 5432
   type: ClusterIP # baza ukryta wewnątrz klastra (brak dostępu z zewnątrz)
 
+---
+# Backend deployment (Spring Boot)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-deployment
+  namespace: social-media-prod
+  annotations:
+    kubernetes.io/change-cause: "Wdrożenie backendu Spring Boot z sondami liveness/readiness i restrykcjami non-root"
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      securityContext:
+        # reguły bezpieczeństwa dla poda
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: spring-app
+          image: szymonkozyra/post-app:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            # pobieranie konfiguracji bazy danych z ConfigMap
+            - name: SPRING_DATASOURCE_IP
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: SPRING_DATASOURCE_IP
+            - name: SPRING_DATASOURCE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: SPRING_DATASOURCE_PORT
+            - name: SPRING_DATASOURCE_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: SPRING_DATASOURCE_DB
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: SPRING_DATASOURCE_USERNAME
+            # pobieranie hasła z Secret
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: password
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            # sonda sprawdzająca czy aplikacja uległa zawieszeniu (deadlock)
+            httpGet:
+              path: /api/v1/posts
+              port: 8080
+            initialDelaySeconds: 40 # czas na uruchomienie
+            periodSeconds: 15
+          readinessProbe:
+            # sonda sprawdzająca czy aplikacja może przyjmować ruch
+            httpGet:
+              path: /api/v1/posts
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+---
+# Backend service
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-service
+  namespace: social-media-prod
+spec:
+  selector:
+    app: backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: ClusterIP
+
