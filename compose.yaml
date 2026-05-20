@@ -12,6 +12,12 @@ services:
       - posts-db-data:/var/lib/postgresql
     networks:
       - post-app-network
+    healthcheck:
+      # sprawdzenie czy baza jest gotowa przyjmować połączenia
+      test: ["CMD-SHELL", "pg_isready -U postgres -d productcataloglab"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   app-service:
     build:
@@ -27,20 +33,28 @@ services:
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=123
     depends_on:
-      - db-service
+      db-service:
+        condition: service_healthy # backend czeka aż baza potwierdzi gotowość
     networks:
       - post-app-network
+    healthcheck:
+      # wysłanie zapytania na endpoint, jeśli odpowiedź to kod 200 OK, aplikacja jest 'zdrowa' (dodanie sond)
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/v1/posts"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   frontend-service:
     build:
       context: ./frontend
     container_name: frontend-container
     ports:
-      - "80:80"
+      - "80:8080"
     networks:
       - post-app-network
     depends_on:
-      - app-service
+      app-service:
+        condition: service_healthy # frontend czeka na podniesienie się API
 
 networks:
   post-app-network:
