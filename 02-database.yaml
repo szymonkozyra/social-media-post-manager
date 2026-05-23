@@ -1,0 +1,95 @@
+---
+# PersistentVolumeClaim - trwałe przechowywanie danych z bazy
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: social-media-prod
+spec:
+  accessModes:
+    - ReadWriteOnce # tylko 1 pod jednocześnie
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+# StatefulSet - stanowa baza danych
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: db-statefulset
+  namespace: social-media-prod
+  annotations:
+    kubernetes.io/change-cause: "Wdrożenie bazy jako StatefulSet z podpiętym PVC i wstrzykniętą konfiguracją"
+spec:
+  serviceName: "db-service"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+        - name: postgres
+          image: szymonkozyra/post-db:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: SPRING_DATASOURCE_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: password
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe: # Sonda sprawdzająca, czy silnik bazy żyje
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "productcataloglab"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe: # Sonda sprawdzająca, czy można już wysyłać zapytania SQL
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "productcataloglab"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+
+---
+# Service - wewnętrzny punkt dostępu do bazy
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-service
+  namespace: social-media-prod
+spec:
+  selector:
+    app: db
+  ports:
+    - port: 5432
+      targetPort: 5432
+  type: ClusterIP # baza ukryta wewnątrz klastra (brak dostępu z zewnątrz)

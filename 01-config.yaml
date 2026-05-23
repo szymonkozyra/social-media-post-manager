@@ -1,0 +1,47 @@
+---
+# Namespace projektu
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: social-media-prod
+  labels:
+    environment: production
+
+---
+# ConfigMap dla zmiennych niewrażliwych
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: social-media-prod
+data:
+  SPRING_DATASOURCE_IP: "db-service"
+  SPRING_DATASOURCE_PORT: "5432"
+  SPRING_DATASOURCE_DB: "productcataloglab"
+  SPRING_DATASOURCE_USERNAME: "postgres"
+
+---
+# Secret dla zmiennych wrażliwych
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-credentials
+  namespace: social-media-prod
+type: Opaque
+data:
+  # Hasło "123" zakodowane w base64
+  password: MTIz
+
+---
+# ResourceQuota - Ochrona klastra przed atakami DoS i wyczerpaniem zasobów
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: project-quota
+  namespace: social-media-prod
+spec:
+  hard:
+    requests.cpu: "1"
+    requests.memory: 1Gi
+    limits.cpu: "2"
+    limits.memory: 2Gi
