@@ -311,13 +311,34 @@ kind: Ingress
 metadata:
   name: social-media-ingress
   namespace: social-media-prod
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   rules:
-    - host: post-manager.local # domena pod którą aplikacja będzie dostępna w przeglądarce
+    - host: post-manager.local
       http:
         paths:
+          # ten ruch kierujemy do backendu
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: app-service
+                port:
+                  number: 8080
+          - path: /swagger-ui
+            pathType: Prefix
+            backend:
+              service:
+                name: app-service
+                port:
+                  number: 8080
+          - path: /v3/api-docs
+            pathType: Prefix
+            backend:
+              service:
+                name: app-service
+                port:
+                  number: 8080
+          # cały pozostały ruch kierujemy do frontendu
           - path: /
             pathType: Prefix
             backend:

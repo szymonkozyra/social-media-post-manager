@@ -1,14 +1,22 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
+    <meta charset="UTF-8">
     <title>Social Media Manager</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .post { border: 1px solid #ccc; margin-bottom: 15px; padding: 15px; border-radius: 5px; }
+        .author { color: #555; font-size: 0.9em; margin-top: -10px; margin-bottom: 10px; }
+        .topic { display: inline-block; background: #007bff; color: white; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-bottom: 10px;}
+    </style>
 </head>
 <body>
 <h1>Social Media Post Manager</h1>
-<div id="posts">Witaj! Aplikacja zostala poprawnie uruchomiona.</div>
+<div id="posts">Ładowanie danych z serwera...</div>
+
 <script>
-    const API_URL = 'http://127.0.0.1:51097';
-    fetch(`${API_URL}/api/v1/posts`)
+    // Ingress kieruje zapytania zaczynające się od /api do backendu
+    fetch('/api/v1/posts')
         .then(response => {
             if (!response.ok) throw new Error('Problem z połączeniem: ' + response.status);
             return response.json();
@@ -16,13 +24,15 @@
         .then(data => {
             const div = document.getElementById('posts');
             if (data.length === 0) {
-                div.innerHTML = "Brak postów w bazie danych.";
+                div.innerHTML = "Brak postów w bazie danych (połączono z API i bazą)";
             } else {
                 div.innerHTML = data.map(p => `
-                    <div style="border: 1px solid #ccc; margin: 10px; padding: 10px;">
-                        <h3>${p.title}</h3>
-                        <p>${p.content}</p>
-                    </div>`).join('');
+                        <div class="post">
+                            <span class="topic">${p.topic}</span>
+                            <h3>${p.title}</h3>
+                            <div class="author">Autor: ${p.author}</div>
+                            <p>${p.content}</p>
+                        </div>`).join('');
             }
         })
         .catch(error => {
