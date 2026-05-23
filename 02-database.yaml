@@ -93,3 +93,26 @@ spec:
     - port: 5432
       targetPort: 5432
   type: ClusterIP # baza ukryta wewnątrz klastra (brak dostępu z zewnątrz)
+
+---
+# Network Policy - Zapora sieciowa dla bazy danych
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: db-network-policy
+  namespace: social-media-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: db
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              # tylko pody z etykietą 'app: backend' mogą połączyć się z bazą na porcie 5432
+              app: backend
+      ports:
+        - protocol: TCP
+          port: 5432
