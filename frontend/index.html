@@ -4,10 +4,58 @@
     <meta charset="UTF-8">
     <title>Social Media Manager</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .post { border: 1px solid #ccc; margin-bottom: 15px; padding: 15px; border-radius: 5px; }
-        .author { color: #555; font-size: 0.9em; margin-top: -10px; margin-bottom: 10px; }
-        .topic { display: inline-block; background: #007bff; color: white; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-bottom: 10px;}
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f4f6f9;
+        }
+        #posts {
+            width: 100%;
+            text-align: left;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .post {
+            background: white;
+            border: 1px solid #e1e4e8;
+            margin-bottom: 15px;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .post-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .topic {
+            background: #007bff;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .author {
+            color: #555;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+        .post h3 {
+            margin: 0 0 6px 0;
+            font-size: 1.3em;
+            color: #2c3e50;
+        }
+        .post p {
+            margin: 0;
+            color: #4a5568;
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body>
@@ -15,7 +63,6 @@
 <div id="posts">Ładowanie danych z serwera...</div>
 
 <script>
-    // Ingress kieruje zapytania zaczynające się od /api do backendu
     fetch('/api/v1/posts')
         .then(response => {
             if (!response.ok) throw new Error('Problem z połączeniem: ' + response.status);
@@ -24,13 +71,15 @@
         .then(data => {
             const div = document.getElementById('posts');
             if (data.length === 0) {
-                div.innerHTML = "Brak postów w bazie danych (połączono z API i bazą)";
+                div.innerHTML = "Brak postów w bazie danych.";
             } else {
                 div.innerHTML = data.map(p => `
                         <div class="post">
-                            <span class="topic">${p.topic}</span>
+                            <div class="post-header">
+                                <span class="topic">${p.topic}</span>
+                                <span class="author">${p.author}</span>
+                            </div>
                             <h3>${p.title}</h3>
-                            <div class="author">Autor: ${p.author}</div>
                             <p>${p.content}</p>
                         </div>`).join('');
             }
